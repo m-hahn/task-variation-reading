@@ -1,0 +1,4 @@
+/juicer/u87/u/nlp/packages/torch/install/bin/th main-attention.lua 57 false true 64 500 128 50000 6.0 true 0.0 100 0.0001 0.6 true pg-test-neat-qa-1800-128-0.7-100-R-5cuny-split-bcontinuing-2   cuny-split-bcontinuing-2-pilotattention-1200-l1-nll-test neat-qa true 5 true 0.01 full true fixed mixed
+
+
+
