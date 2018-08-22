@@ -246,7 +246,7 @@ end
 
 
 --           modelsArray = {params,(numberOfWords/params.seq_length),SparamxForward, SparamdxForward, SparamxBackward, SparamdxBackward, SparamxQForward, SparamdxQForward, SparamxQBackward, SparamdxQBackward, SparamxA, SparamdxA, SparamxRA, SparamdxRA}
-  embeddingsShrinkingFactor = 10.0
+  embeddingsShrinkingFactor = 30.0
   if #SparamxRA == 0 then
     print("Pretrained embeddings for attention. "..tostring(neatQA.ATTENTION_EMBEDDINGS_FROM_READER))
     if neatQA.ATTENTION_EMBEDDINGS_FROM_READER then
@@ -409,8 +409,8 @@ if true or neatQA.CONDITION == "preview" then
    local y0 = nn.Identity()()
    -- y0 consists of the one-hot vectors of the questions
    questionTokensReshaped =  nn.JoinTable(1)(y0)
-   questionTokensEmbeddings = nn.LookupTableMaskZero(params.vocab_size,params.embeddings_dimensionality)(questionTokensReshaped)
-   questionTokensEmbeddings = nn.View(-1,params.batch_size,params.embeddings_dimensionality)(questionTokensEmbeddings)
+   questionTokensEmbeddings = nn.LookupTableMaskZero(params.vocab_size,300)(questionTokensReshaped)
+   questionTokensEmbeddings = nn.View(-1,params.batch_size,300)(questionTokensEmbeddings)
    questionTokensEmbeddings = nn.Transpose({1,2})(questionTokensEmbeddings)
    neatQA.questionEncoder = nn.gModule({y0},{questionTokensEmbeddings}):cuda()
    questionEncParams, questionEncGradparams = neatQA.questionEncoder:parameters()
@@ -639,7 +639,7 @@ function neatQA.printStuff(perp, actor_output, since_beginning, epoch, numberOfW
                     print("463: answerID == nil")
                     answerID = 1
                end
-               if  (DOING_DEBUGGING or (CREATE_RECORDED_FILES and DOING_EVALUATION_OUTPUT) or false or math.random() < 0.0001) then
+               if  (DOING_DEBUGGING or (CREATE_RECORDED_FILES and DOING_EVALUATION_OUTPUT) or false or math.random() < 0.1) then
 --                  auxiliary.deepPrint(neatQA.inputTensors, function (tens) return tens[l] end)
                   print(45825)
 print("QUESTION:")

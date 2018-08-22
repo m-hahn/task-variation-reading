@@ -79,9 +79,8 @@ assert(not(APPLY_TRAFO_ALSO_TO_Q) or not (QUESTION_ATTENTION_BILINEAR))
    local x = nn.Identity()()
    local xemb
    assert(not(neatQA.DO_TRAINING_ON_ATTENTION_EMBEDDINGS))
---   xemb = nn.BlockGradientLayer(params.batch_size, params.embeddings_dimensionality)(nn.LookupTableMaskZero(params.vocab_size,params.embeddings_dimensionality)(x))
-   xemb = nn.LookupTableMaskZero(params.vocab_size,params.embeddings_dimensionality)(x)
-
+--   xemb = nn.BlockGradientLayer(params.batch_size, 300)(nn.LookupTableMaskZero(params.vocab_size,300)(x))
+   xemb = nn.LookupTableMaskZero(params.vocab_size,300)(x)
 
    local y = nn.Identity()()
    local z = nn.Identity()()
@@ -107,11 +106,11 @@ if false then
  assert(not(attention.ALLOW_HIDDEN_LAYERS))
  print("Using intermediate vector representation")
  embeddingIntermediateDimension = 50
- xemb = nn.ELU()(nn.Linear(100,embeddingIntermediateDimension)(xemb))
+ xemb = nn.ELU()(nn.Linear(300,embeddingIntermediateDimension)(xemb))
 else
  print("Using direct input")
  xemb = xemb
- embeddingIntermediateDimension = 100
+ embeddingIntermediateDimension = 300
 end
 
 ---------------------------------------
@@ -128,8 +127,8 @@ y0 = y
 local inputReplicated
 
   inputReplicated = nn.ReplicateDynamic()({questionTokensEmbeddings,xembOrig})
-  inputReplicated = nn.View(-1,params.embeddings_dimensionality)(inputReplicated)
-  questionTokensEmbeddings = nn.View(-1,params.embeddings_dimensionality)(questionTokensEmbeddings)
+  inputReplicated = nn.View(-1,300)(inputReplicated)
+  questionTokensEmbeddings = nn.View(-1,300)(questionTokensEmbeddings)
 
 QUESTION_ATTENTION_BILINEAR = false --true --false --true--true --false --true --false --true
 print("Question Attention bilinear? ")
@@ -152,8 +151,8 @@ print("VARIANT NUMBER "..DOING_VARIANT)
 if DOING_VARIANT == 54 or DOING_VARIANT == 58 then --54, 58
   assert(false)
   print("DOING 54 58 at 10521")
-  fromInput = nn.Linear(30,1)(nn.Dropout(0.1)(nn.ReLU()(nn.Linear(102,30)(fromInput)))) -- attention score from the input
-  gateFromInput = (nn.Linear(30,1)(nn.Dropout(0.1)(nn.ReLU()(nn.Linear(embeddingIntermediateDimension,30)(xemb))))) -- gating score from the input
+  fromInput = nn.Linear(30,1)(nn.Dropout(0.1)(nn.ReLU()(nn.Linear(302,30)(fromInput)))) -- attention score from the input
+  gateFromInput = (nn.Linear(30,1)(nn.Dropout(0.1)(nn.ReLU()(nn.Linear(300,30)(xemb))))) -- gating score from the input
  if DOING_VARIANT == 54 then -- 54
    gateFromInput = nn.Sigmoid()(gateFromInput)
  elseif DOING_VARIANT == 58 then
@@ -164,8 +163,8 @@ if DOING_VARIANT == 54 or DOING_VARIANT == 58 then --54, 58
 else --55, 56, 57, 59
   assert(DOING_VARIANT == 55 or DOING_VARIANT == 59 or DOING_VARIANT == 56)
   print("DOING 55 56 57 at 10927")
-  fromInput = attention.scalarCoefficient(embeddingIntermediateDimension+2,fromInput,"fromInput") -- attention score from the input
-  gateFromInput = attention.scalarCoefficient(embeddingIntermediateDimension,xemb,"gateFromInput") -- gating score from the input
+  fromInput = attention.scalarCoefficient(300+2,fromInput,"fromInput") -- attention score from the input
+  gateFromInput = attention.scalarCoefficient(300,xemb,"gateFromInput") -- gating score from the input
  if DOING_VARIANT == 55 or DOING_VARIANT == 56 then -- 55,56,57
    gateFromInput = nn.Sigmoid()(gateFromInput)
  else
@@ -230,7 +229,7 @@ if false then
   assert(false)
   print("Fixed decay; dependent on source word")
   -- weight for the Quest value for future
-  questHistOutGate = nn.Linear(embeddingIntermediateDimension,1)(xemb)
+  questHistOutGate = nn.Linear(300,1)(xemb)
   questHistOutGate = nn.StoreInContainerLayer("questHistoryOutGate", true)(questHistOutGate)
   gatedForHistory = nn.CMulTable()({questHistOutGate, qSimForHistory})
   gatedForHistory = nn.StoreInContainerLayer("gatedFromHistory", true)(gatedForHistory)
@@ -259,7 +258,7 @@ elseif true then
 --  gatedQuestForFuture = nn.StoreInContainerLayer("gatedQuestForFuture", true)(gatedQuestForFuture)
 
   -- weight for the Quest value for future
-  questHistOutGate = nn.Linear(embeddingIntermediateDimension,1)(xemb)
+  questHistOutGate = nn.Linear(300,1)(xemb)
   questHistOutGate = nn.StoreInContainerLayer("questHistoryOutGate", true)(questHistOutGate)
 
   -- used for this decision
@@ -268,12 +267,12 @@ elseif true then
 else
   assert(false)
   print("Varied decay and dependent on target word")
-  questHistFutureGate = nn.Sigmoid()(nn.Linear(embeddingIntermediateDimension,1)(xemb)) -- how much should come from this word
+  questHistFutureGate = nn.Sigmoid()(nn.Linear(300,1)(xemb)) -- how much should come from this word
   questHistFutureGate = nn.StoreInContainerLayer("questHistoryFutureGate", true)(questHistFutureGate)
   gatedQuestForFuture = nn.CAddTable()({nn.CMulTable()({questHistFutureGate, qSimForHistory}), nn.CMulTable()({nn.SAdd(-1,true)(questHistFutureGate), questionHistory})})
   gatedQuestForFuture = nn.StoreInContainerLayer("gatedQuestForFuture", true)(gatedQuestForFuture)
 
-  questHistOutGate = nn.Linear(embeddingIntermediateDimension,1)(xemb)
+  questHistOutGate = nn.Linear(300,1)(xemb)
   if DOING_VARIANT == 55 then
     print("Sigmoid for questHistOutGate")
     questHistOutGate = nn.Sigmoid()(questHistOutGate)
@@ -290,9 +289,9 @@ end
 
 
 
-positionGate = nn.Linear(embeddingIntermediateDimension,1)(xemb)
+positionGate = nn.Linear(300,1)(xemb)
 positionGate = nn.StoreInContainerLayer("positionGate", true)(positionGate)
-local centeredPosition = nn.AddConstant(-0.45)(position)
+local centeredPosition = nn.AddConstant(-0.225)(position)
 positionGated = nn.CMulTable()({positionGate, centeredPosition})
 positionGated = nn.StoreInContainerLayer("positionGated", true)(positionGated)
 
@@ -304,7 +303,7 @@ positionGated = nn.StoreInContainerLayer("positionGated", true)(positionGated)
 
   -- output gate
 if false then
-  local gateLastFixHistory = nn.Linear(embeddingIntermediateDimension,1)(xemb)
+  local gateLastFixHistory = nn.Linear(300,1)(xemb)
   local lastFixHistoryInContainer = nn.StoreInContainerLayer("lastFixHistory", true)(lastFixHistory)
   gateLastFixHistory = nn.StoreInContainerLayer("gateLastFixHistory", true)(gateLastFixHistory)
   local decayLastFix = nn.Sigmoid()(nn.Add(-1,true)(nn.MulConstant(0.0)(qSimForHistory)))
@@ -322,7 +321,7 @@ local gatedConditionTimesPosition
 assert(DOING_EVALUATION_OUTPUT or neatQA.CONDITION == "mixed" or neatQA.CONDITION == "fullpreview" or neatQA.CONDITION == "fullnopreview")
 
   local centeredCondition = nn.AddConstant(-0.5)(condition_mask)
-  local conditionGate = nn.Linear(embeddingIntermediateDimension,1)(xemb)
+  local conditionGate = nn.Linear(300,1)(xemb)
 
   conditionGate = nn.StoreInContainerLayer("conditionGate", true)(conditionGate)
 
@@ -335,7 +334,7 @@ assert(DOING_EVALUATION_OUTPUT or neatQA.CONDITION == "mixed" or neatQA.CONDITIO
 
   local conditionTimesPosition = nn.CMulTable()({centeredCondition, centeredPosition})
   
-  local conditionTimesPositionGate = nn.Linear(embeddingIntermediateDimension,1)(xemb)
+  local conditionTimesPositionGate = nn.Linear(300,1)(xemb)
   conditionTimesPositionGate = nn.StoreInContainerLayer("conditionTimesPositionGate",true)(conditionTimesPositionGate)
   gatedConditionTimesPosition = nn.CMulTable()({conditionTimesPositionGate, conditionTimesPosition})
 
@@ -469,9 +468,9 @@ end
 --    gradparam = {"PLACEHOLDER","PLACEHOLDER",gradparam[1]}
 --  end
 
-if (not IS_CONTINUING_ATTENTION) then
-  assert(#param == 1)
-end
+  if (not IS_CONTINUING_ATTENTION) then
+    assert(#param == 1)
+  end
 
 
   if #param ~= #parameters then
@@ -493,6 +492,7 @@ end
       print(param)
     end
   end
+
   if DOING_EVALUATION_OUTPUT then
      print(param)
      print(parameters)
@@ -522,7 +522,6 @@ end
     end
   end
 
-
 if true then
   params.CONDITION_BIAS = nil
   print("WARNING: BLOCKING CONDITION BIAS")
@@ -539,7 +538,6 @@ end
         print("#   "..parameters[i][1]:norm())
     end
   end
-
 
   return transfer_data(module)
 end
@@ -731,9 +729,9 @@ assert(not(APPLY_TRAFO_ALSO_TO_Q) or not (QUESTION_ATTENTION_BILINEAR))
    local x = nn.Identity()()
    local xemb
    assert(not(neatQA.DO_TRAINING_ON_ATTENTION_EMBEDDINGS))
---   xemb = nn.BlockGradientLayer(params.batch_size, params.embeddings_dimensionality)(nn.LookupTableMaskZero(params.vocab_size,params.embeddings_dimensionality)(x))
-   xemb = nn.LookupTableMaskZero(params.vocab_size,params.embeddings_dimensionality)(x)
-
+--   xemb = nn.BlockGradientLayer(params.batch_size, 300)(nn.LookupTableMaskZero(params.vocab_size,300)(x))
+   xemb = nn.LookupTableMaskZero(params.vocab_size,300)(x)
+crash()
 
    local y = nn.Identity()()
    local z = nn.Identity()()
@@ -761,8 +759,8 @@ y0 = y
 local inputReplicated
 
   inputReplicated = nn.ReplicateDynamic()({questionTokensEmbeddings,xembOrig})
-  inputReplicated = nn.View(-1,params.embeddings_dimensionality)(inputReplicated)
-  questionTokensEmbeddings = nn.View(-1,params.embeddings_dimensionality)(questionTokensEmbeddings)
+  inputReplicated = nn.View(-1,300)(inputReplicated)
+  questionTokensEmbeddings = nn.View(-1,300)(questionTokensEmbeddings)
 
 QUESTION_ATTENTION_BILINEAR = false --true --false --true--true --false --true --false --true
 print("Question Attention bilinear? ")
@@ -785,8 +783,8 @@ print("VARIANT NUMBER "..DOING_VARIANT)
 if DOING_VARIANT == 54 or DOING_VARIANT == 58 then --54, 58
   assert(false)
   print("DOING 54 58 at 10521")
-  fromInput = nn.Linear(30,1)(nn.Dropout(0.1)(nn.ReLU()(nn.Linear(102,30)(fromInput)))) -- attention score from the input
-  gateFromInput = (nn.Linear(30,1)(nn.Dropout(0.1)(nn.ReLU()(nn.Linear(100,30)(xemb))))) -- gating score from the input
+  fromInput = nn.Linear(30,1)(nn.Dropout(0.1)(nn.ReLU()(nn.Linear(302,30)(fromInput)))) -- attention score from the input
+  gateFromInput = (nn.Linear(30,1)(nn.Dropout(0.1)(nn.ReLU()(nn.Linear(300,30)(xemb))))) -- gating score from the input
  if DOING_VARIANT == 54 then -- 54
    gateFromInput = nn.Sigmoid()(gateFromInput)
  elseif DOING_VARIANT == 58 then
@@ -797,8 +795,8 @@ if DOING_VARIANT == 54 or DOING_VARIANT == 58 then --54, 58
 else --55, 56, 57, 59
   assert(DOING_VARIANT == 55 or DOING_VARIANT == 59 or DOING_VARIANT == 56)
   print("DOING 55 56 57 at 10927")
-  fromInput = nn.Linear(102,1)(fromInput) -- attention score from the input
-  gateFromInput = (nn.Linear(100,1)(xemb)) -- gating score from the input
+  fromInput = nn.Linear(302,1)(fromInput) -- attention score from the input
+  gateFromInput = (nn.Linear(300,1)(xemb)) -- gating score from the input
  if DOING_VARIANT == 55 or DOING_VARIANT == 56 then -- 55,56,57
    gateFromInput = nn.Sigmoid()(gateFromInput)
  else
@@ -853,7 +851,7 @@ end
 if false then
   print("Fixed decay; dependent on source word")
   -- weight for the Quest value for future
-  questHistOutGate = nn.Linear(100,1)(xemb)
+  questHistOutGate = nn.Linear(300,1)(xemb)
   questHistOutGate = nn.StoreInContainerLayer("questHistoryOutGate", true)(questHistOutGate)
   gatedForHistory = nn.CMulTable()({questHistOutGate, qSimForHistory})
   gatedForHistory = nn.StoreInContainerLayer("gatedFromHistory", true)(gatedForHistory)
@@ -881,7 +879,7 @@ elseif true then
 
 
   -- weight for the Quest value for future
-  questHistOutGate = nn.Linear(100,1)(xemb)
+  questHistOutGate = nn.Linear(300,1)(xemb)
   questHistOutGate = nn.StoreInContainerLayer("questHistoryOutGate", true)(questHistOutGate)
 
   -- used for this decision
@@ -894,12 +892,12 @@ elseif true then
 
 else
   print("Varied decay and dependent on target word")
-  questHistFutureGate = nn.Sigmoid()(nn.Linear(100,1)(xemb)) -- how much should come from this word
+  questHistFutureGate = nn.Sigmoid()(nn.Linear(300,1)(xemb)) -- how much should come from this word
   questHistFutureGate = nn.StoreInContainerLayer("questHistoryFutureGate", true)(questHistFutureGate)
   gatedQuestForFuture = nn.CAddTable()({nn.CMulTable()({questHistFutureGate, qSimForHistory}), nn.CMulTable()({nn.SAdd(-1,true)(questHistFutureGate), questionHistory})})
   gatedQuestForFuture = nn.StoreInContainerLayer("gatedQuestForFuture", true)(gatedQuestForFuture)
 
-  questHistOutGate = nn.Linear(100,1)(xemb)
+  questHistOutGate = nn.Linear(300,1)(xemb)
   if DOING_VARIANT == 55 then
     print("Sigmoid for questHistOutGate")
     questHistOutGate = nn.Sigmoid()(questHistOutGate)
@@ -909,7 +907,7 @@ else
   gatedFromHistory = nn.StoreInContainerLayer("gatedFromHistory", true)(gatedFromHistory)
 end
 
-positionGate = nn.Linear(100,1)(xemb)
+positionGate = nn.Linear(300,1)(xemb)
 positionGate = nn.StoreInContainerLayer("positionGate", true)(positionGate)
 local centeredPosition = nn.AddConstant(-0.45)(position)
 positionGated = nn.CMulTable()({positionGate, centeredPosition})
@@ -925,7 +923,7 @@ if neatQA.CONDITION == "nopreview" then
   gatedFromHistory = nn.MulConstant(0.0)(gatedFromHistory)
 elseif true or neatQA.CONDITION == "mixed" then
   local centeredCondition = nn.AddConstant(-0.5)(condition_mask)
-  local conditionGate = nn.Linear(100,1)(xemb)
+  local conditionGate = nn.Linear(300,1)(xemb)
 
   conditionGate = nn.StoreInContainerLayer("conditionGate", true)(conditionGate)
 
@@ -938,7 +936,7 @@ elseif true or neatQA.CONDITION == "mixed" then
 
   local conditionTimesPosition = nn.CMulTable()({centeredCondition, centeredPosition})
   
-  local conditionTimesPositionGate = nn.Linear(100,1)(xemb)
+  local conditionTimesPositionGate = nn.Linear(300,1)(xemb)
   conditionTimesPositionGate = nn.StoreInContainerLayer("conditionTimesPositionGate",true)(conditionTimesPositionGate)
   gatedConditionTimesPosition = nn.CMulTable()({conditionTimesPositionGate, conditionTimesPosition})
 
