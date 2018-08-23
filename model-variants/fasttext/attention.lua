@@ -2,6 +2,8 @@ attention = {}
 
 require('nn.BernoulliLayer')
 require('nn.ReplicateDynamic')
+require('nn.ExpandDynamic')
+
 require('nn.BernoulliLayerSigmoidWithLogProb')
 require('nn.StoreInContainerLayer')
 
@@ -126,8 +128,9 @@ y0 = y
    questionTokensEmbeddings = y0
 local inputReplicated
 
-  inputReplicated = nn.ReplicateDynamic()({questionTokensEmbeddings,xembOrig})
-  inputReplicated = nn.View(-1,300)(inputReplicated)
+--  inputReplicated = nn.ReplicateDynamic()({questionTokensEmbeddings,xembOrig})
+--  inputReplicated = nn.ExpandDynamic()({questionTokensEmbeddings,xembOrig})
+--  inputReplicated = nn.View(-1,300)(inputReplicated)
   questionTokensEmbeddings = nn.View(-1,300)(questionTokensEmbeddings)
 
 QUESTION_ATTENTION_BILINEAR = false --true --false --true--true --false --true --false --true
@@ -135,7 +138,7 @@ print("Question Attention bilinear? ")
 print(QUESTION_ATTENTION_BILINEAR)
 
    dimensionOfConvolution = 1
-     questionTokensEmbeddings = nn.DotProduct()({(inputReplicated), (questionTokensEmbeddings)})
+     questionTokensEmbeddings = nn.MulConstant(0.0)(nn.DotProduct()({(questionTokensEmbeddings), nn.Identity()(questionTokensEmbeddings)}))
 assert(dimensionOfConvolution == 1)
 questionTokensEmbeddingsFlat = nn.View(params.batch_size,-1,dimensionOfConvolution)(questionTokensEmbeddings) -- batch * length * conv
    questionEmbeddingMax = nn.Max(2,3)(questionTokensEmbeddingsFlat)
@@ -291,7 +294,7 @@ end
 
 positionGate = nn.Linear(300,1)(xemb)
 positionGate = nn.StoreInContainerLayer("positionGate", true)(positionGate)
-local centeredPosition = nn.AddConstant(-0.225)(position)
+local centeredPosition = nn.AddConstant(-0.45)(position)
 positionGated = nn.CMulTable()({positionGate, centeredPosition})
 positionGated = nn.StoreInContainerLayer("positionGated", true)(positionGated)
 
@@ -320,7 +323,7 @@ local gatedConditionTimesPosition
 --
 assert(DOING_EVALUATION_OUTPUT or neatQA.CONDITION == "mixed" or neatQA.CONDITION == "fullpreview" or neatQA.CONDITION == "fullnopreview")
 
-  local centeredCondition = nn.AddConstant(-0.5)(condition_mask)
+  local centeredCondition = nn.AddConstant(-0.0)(condition_mask)
   local conditionGate = nn.Linear(300,1)(xemb)
 
   conditionGate = nn.StoreInContainerLayer("conditionGate", true)(conditionGate)
@@ -757,8 +760,8 @@ y0 = y
 
    questionTokensEmbeddings = y0
 local inputReplicated
-
-  inputReplicated = nn.ReplicateDynamic()({questionTokensEmbeddings,xembOrig})
+crash()
+  inputReplicated = nn.ExpandDynamic()({questionTokensEmbeddings,xembOrig})
   inputReplicated = nn.View(-1,300)(inputReplicated)
   questionTokensEmbeddings = nn.View(-1,300)(questionTokensEmbeddings)
 
@@ -922,7 +925,7 @@ if neatQA.CONDITION == "nopreview" then
   gatedDotProduct = nn.MulConstant(0.0)(gatedDotProduct)
   gatedFromHistory = nn.MulConstant(0.0)(gatedFromHistory)
 elseif true or neatQA.CONDITION == "mixed" then
-  local centeredCondition = nn.AddConstant(-0.5)(condition_mask)
+  local centeredCondition = nn.AddConstant(-0.0)(condition_mask)
   local conditionGate = nn.Linear(300,1)(xemb)
 
   conditionGate = nn.StoreInContainerLayer("conditionGate", true)(conditionGate)
